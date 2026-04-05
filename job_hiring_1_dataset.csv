@@ -1,0 +1,11 @@
+Candidate,Gender,Age,Experience,Decision
+A,Male,28,3 years,Selected
+B,Female,25,3 years,Rejected
+C,Male,35,10 years,Selected
+D,Male,30,5 years,Selected
+E,Female,30,5 years,Rejected
+F,Female,45,15 years,Selected
+G,Male,26,2 years,Rejected
+H,Female,27,2 years,Rejected
+I,Male,40,12 years,Selected
+J,Female,40,12 years,Selected

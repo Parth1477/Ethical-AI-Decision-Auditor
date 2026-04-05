@@ -1,0 +1,11 @@
+Gender,Age,HealthScore,Decision
+Male,45,80,Approved
+Female,45,80,Rejected
+Male,50,75,Approved
+Female,50,75,Rejected
+Male,42,85,Approved
+Female,42,85,Rejected
+Male,48,78,Approved
+Female,48,78,Rejected
+Male,46,82,Approved
+Female,46,82,Rejected

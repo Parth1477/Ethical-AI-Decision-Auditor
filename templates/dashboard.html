@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ── Dashboard Header ─────────────────────────────────────────────────────── -->
+<div class="dashboard-header">
+    <h2>Ethical Audit Dashboard</h2>
+    {% if dataset_name %}
+    <p>Dataset: <strong class="highlight-text">{{ dataset_name }}</strong>
+        {% if decision_labels %}
+        · Labels detected: <code>{{ decision_labels.positive }}</code> / <code>{{ decision_labels.negative }}</code>
+        {% endif %}
+    </p>
+    {% else %}
+    <p>Visual analytics of the analysed dataset decisions.</p>
+    {% endif %}
+
+    <!-- Detected attributes badge row -->
+    {% if detected_attributes %}
+    <div class="detected-attrs-row mt-3">
+        <span class="detected-label">Auto-detected sensitive attributes:</span>
+        {% for attr in detected_attributes %}
+        <span class="attr-badge attr-badge-{{ attr.reason | replace('_','-') }}" title="Detection: {{ attr.reason }} | Unique values: {{ attr.n_unique }} | Type: {{ attr.dtype }}">
+            {{ attr.col }}
+            <span class="attr-badge-reason">{{ attr.reason | replace('_',' ') }}</span>
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if risk_score %}
+    <div class="risk-gauge {% if risk_score <= 30 %}low-risk{% elif risk_score <= 60 %}medium-risk{% else %}high-risk{% endif %}">
+        <span class="score-value">{{ risk_score }}</span>
+        <span class="score-label">Risk Score</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Bias Explanation Cards ───────────────────────────────────────────────── -->
+{% if bias_explanations %}
+<div class="section-title mt-4">
+    <h3>🔎 Bias Explanation</h3>
+    <p>Per-attribute fairness analysis with plain-English explanations.</p>
+</div>
+<div class="bias-explanation-grid mt-2">
+    {% for exp in bias_explanations %}
+    <div class="card bias-exp-card {% if exp.bias_detected %}bias-exp-biased{% else %}bias-exp-fair{% endif %}">
+        <div class="bias-exp-header">
+            <span class="bias-attr-name">{{ exp.attribute }}</span>
+            {% if exp.bias_detected %}
+            <span class="badge badge-danger">⚠️ Biased</span>
+            {% else %}
+            <span class="badge badge-success">✅ Fair</span>
+            {% endif %}
+        </div>
+
+        <!-- Group rate bars -->
+        <div class="rate-bars mt-2">
+            {% for group, rate in exp.group_rates.items() %}
+            <div class="rate-bar-row">
+                <span class="rate-group-label">{{ group }}</span>
+                <div class="rate-bar-track">
+                    <div class="rate-bar-fill {% if rate < 0.5 %}rate-bar-low{% elif rate < 0.75 %}rate-bar-mid{% else %}rate-bar-high{% endif %}"
+                         style="width: {{ (rate * 100)|int }}%"></div>
+                </div>
+                <span class="rate-pct">{{ (rate * 100)|round(1) }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Metrics row -->
+        <div class="bias-metrics-row mt-2">
+            <div class="bias-metric">
+                <span class="bias-metric-label">Disparate Impact</span>
+                <span class="bias-metric-value {% if exp.di_ratio < 0.8 %}metric-bad{% else %}metric-good{% endif %}">
+                    {{ exp.di_ratio }}
+                </span>
+            </div>
+            <div class="bias-metric">
+                <span class="bias-metric-label">Parity Gap</span>
+                <span class="bias-metric-value">{{ (exp.parity_diff * 100)|round(1) }}%</span>
+            </div>
+            <div class="bias-metric">
+                <span class="bias-metric-label">4/5ths Rule</span>
+                <span class="bias-metric-value {% if exp.di_ratio < 0.8 %}metric-bad{% else %}metric-good{% endif %}">
+                    {% if exp.di_ratio < 0.8 %}Violated{% else %}Satisfied{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Plain-English explanation -->
+        {% if exp.explanation_text %}
+        <div class="bias-plain-eng mt-2">
+            {{ exp.explanation_text | replace('\n', '<br>') | safe }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Charts Grid ──────────────────────────────────────────────────────────── -->
+<div class="section-title mt-4">
+    <h3>📊 Visual Analytics</h3>
+</div>
+<div class="charts-grid mt-2">
+    <!-- Chart 1: Disparate Impact -->
+    <div class="card chart-card">
+        <h3>Disparate Impact Ratio</h3>
+        <div class="chart-wrapper">
+            <canvas id="biasChart"></canvas>
+        </div>
+        <p class="chart-note">Red dashed line = 4/5ths threshold (0.80). Bars below = bias detected.</p>
+    </div>
+
+    <!-- Chart 2: Feature Influence -->
+    <div class="card chart-card">
+        <h3>Feature Influence</h3>
+        <div class="chart-wrapper">
+            <canvas id="featureChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 3: Selection Rates -->
+    <div class="card chart-card" style="grid-column: 1 / -1;">
+        <h3>Selection Rates by Group</h3>
+        <div class="chart-wrapper">
+            <canvas id="selectionChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ── Advanced Metrics Table ──────────────────────────────────────────────── -->
+{% if metrics and metrics.demographic_parity_diff %}
+<div class="section-title mt-4">
+    <h3>📐 Advanced Fairness Metrics</h3>
+</div>
+<div class="card mt-2">
+    <table class="metrics-table">
+        <thead>
+            <tr>
+                <th>Attribute</th>
+                <th>Disparate Impact</th>
+                <th>Parity Difference</th>
+                <th>4/5ths Rule</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attr, di in (metrics.disparate_impact or {}).items() %}
+            <tr>
+                <td><strong>{{ attr }}</strong></td>
+                <td class="{% if di < 0.8 %}metric-bad{% else %}metric-good{% endif %}">{{ di }}</td>
+                <td>{{ ((metrics.demographic_parity_diff or {}).get(attr, 0) * 100)|round(1) }}%</td>
+                <td class="{% if di < 0.8 %}metric-bad{% else %}metric-good{% endif %}">
+                    {% if di < 0.8 %}❌ Violated{% else %}✅ Satisfied{% endif %}
+                </td>
+                <td>
+                    {% if di < 0.8 %}
+                    <span class="badge badge-danger">Bias</span>
+                    {% else %}
+                    <span class="badge badge-success">Fair</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- ── Business Impact ──────────────────────────────────────────────────────── -->
+{% if business_impact %}
+<div class="section-title mt-4">
+    <h3>💼 Business Impact Analysis
+        {% if context and context != 'general' %}
+        <span class="context-badge">{{ context|capitalize }} Context</span>
+        {% endif %}
+    </h3>
+</div>
+<div class="card mt-2 business-impact-card">
+    <ul class="impact-list">
+        {% for item in business_impact %}
+        <li>{{ item | replace('**', '') }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- ── Action Buttons ───────────────────────────────────────────────────────── -->
+<div class="mt-4 text-center">
+    {% if audit_id %}
+    <a href="{{ url_for('results', audit_id=audit_id) }}" class="btn btn-primary">📋 View Full Report</a>
+    {% endif %}
+    <a href="/upload" class="btn btn-secondary ml-3">🔄 Run New Audit</a>
+</div>
+
+<!-- ── Chart.js Scripts ─────────────────────────────────────────────────────── -->
+<script>
+    const metricsData      = {{ (metrics or {}) | tojson | safe }};
+    const featureImportance = {{ (feature_importance or {}) | tojson | safe }};
+
+    // Threshold line plugin
+    const thresholdPlugin = {
+        id: 'thresholdLine',
+        afterDraw(chart) {
+            if (chart.config.type !== 'bar') return;
+            const yAxis = chart.scales.y;
+            if (!yAxis) return;
+            const y = yAxis.getPixelForValue(0.8);
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.moveTo(chart.chartArea.left, y);
+            ctx.lineTo(chart.chartArea.right, y);
+            ctx.stroke();
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '11px Inter, sans-serif';
+            ctx.fillText('4/5ths threshold (0.80)', chart.chartArea.left + 6, y - 6);
+            ctx.restore();
+        }
+    };
+    Chart.register(thresholdPlugin);
+
+    window.addEventListener('load', function () {
+        // NULL GUARD: ensure metricsData is always a plain object
+        const safeMetrics = (metricsData && typeof metricsData === 'object') ? metricsData : {};
+        const safeFeat    = (featureImportance && typeof featureImportance === 'object' && Object.keys(featureImportance).length)
+                            ? featureImportance : { Attributes: 1.0 };
+
+        /* Chart 1: Disparate Impact */
+        const diData    = safeMetrics.disparate_impact || {};
+        const biasLabels = Object.keys(diData).length ? Object.keys(diData) : ['No data'];
+        const biasValues = Object.keys(diData).length ? Object.values(diData) : [1.0];
+        const bgColors   = biasValues.map(v => v < 0.8 ? 'rgba(239,68,68,0.7)' : 'rgba(16,185,129,0.7)');
+        const bdColors   = biasValues.map(v => v < 0.8 ? '#ef4444' : '#10b981');
+
+        new Chart(document.getElementById('biasChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: biasLabels,
+                datasets: [{ label: 'DI Ratio', data: biasValues,
+                    backgroundColor: bgColors, borderColor: bdColors, borderWidth: 2, borderRadius: 6 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { min: 0, max: 1.05, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                    x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                },
+                plugins: { legend: { labels: { color: '#f8fafc' } } }
+            }
+        });
+
+        /* Chart 2: Feature Influence */
+        const featData = safeFeat;
+        new Chart(document.getElementById('featureChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(featData),
+                datasets: [{ data: Object.values(featData),
+                    backgroundColor: ['#10B981', '#EF4444', '#F59E0B', '#6366F1', '#8b5cf6'],
+                    borderWidth: 0 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', padding: 16 } } }
+            }
+        });
+
+        /* Chart 3: Selection Rates */
+        const selRates = safeMetrics.selection_rates || {};
+        const allLabels = [], allValues = [], allColors = [];
+        const palette = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+        let ci = 0;
+
+        for (const [attr, groups] of Object.entries(selRates)) {
+            for (const [group, rate] of Object.entries(groups)) {
+                allLabels.push(`${attr}: ${group}`);
+                allValues.push(Math.round(rate * 100));
+                allColors.push(palette[ci++ % palette.length]);
+            }
+        }
+
+        const selL = allLabels.length ? allLabels : ['Gender: Male','Gender: Female'];
+        const selV = allValues.length ? allValues : [80, 50];
+        const selC = allColors.length ? allColors : ['#6366f1','#ec4899'];
+
+        new Chart(document.getElementById('selectionChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: selL,
+                datasets: [{ label: 'Selection Rate (%)', data: selV,
+                    backgroundColor: selC, borderWidth: 0, borderRadius: 6 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { min: 0, max: 100,
+                        ticks: { color: '#94a3b8', callback: v => v + '%' },
+                        grid: { color: '#1e293b' } },
+                    x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                },
+                plugins: { legend: { labels: { color: '#f8fafc' } } }
+            }
+        });
+    });
+</script>
+{% endblock %}

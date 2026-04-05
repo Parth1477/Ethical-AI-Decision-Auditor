@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+    <h1>Audit AI Decisions for Fairness & Transparency</h1>
+    <p>Upload a dataset or enter decision data manually to evaluate bias, detect unfair patterns, and generate an ethical risk score.</p>
+    <div class="cta-group">
+        <a href="/upload" class="btn btn-primary">Start Audit</a>
+        <a href="/dashboard" class="btn btn-secondary">View Dashboard</a>
+    </div>
+</div>
+
+<div class="features-grid">
+    <div class="card feature-card">
+        <h3>Bias Detection</h3>
+        <p>Analyze disparate impact and selection rates across sensitive attributes.</p>
+    </div>
+    <div class="card feature-card">
+        <h3>Ethical Risk Scoring</h3>
+        <p>Get a comprehensive risk score evaluating potential ethical pitfalls.</p>
+    </div>
+    <div class="card feature-card">
+        <h3>Explainability</h3>
+        <p>Understand which features drive AI decisions for complete transparency.</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+Gender,Age,Experience,Decision
+Male,25,3,Selected
+Female,25,3,Selected
+Male,28,4,Selected
+Female,28,4,Selected
+Male,30,5,Rejected
+Female,30,5,Rejected
+Male,32,6,Selected
+Female,32,6,Selected
+Male,35,7,Rejected
+Female,35,7,Rejected
+Male,27,4,Selected
+Female,27,4,Selected

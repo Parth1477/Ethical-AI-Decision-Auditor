@@ -1,0 +1,11 @@
+Gender,Age,Income,Decision
+Male,30,60000,Approved
+Female,30,60000,Rejected
+Male,35,65000,Approved
+Female,35,65000,Rejected
+Male,40,70000,Approved
+Female,40,70000,Rejected
+Male,28,55000,Approved
+Female,28,55000,Rejected
+Male,32,62000,Approved
+Female,32,62000,Rejected

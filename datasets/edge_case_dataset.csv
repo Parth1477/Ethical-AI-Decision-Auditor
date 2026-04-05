@@ -1,0 +1,13 @@
+ApplicantID,Department,Seniority,Outcome
+1001,Engineering,Junior,Yes
+1002,Sales,Senior,Yes
+1003,HR,Junior,No
+1004,Engineering,Senior,Yes
+1005,Sales,Junior,No
+1006,HR,Senior,Yes
+1007,Engineering,Junior,Yes
+1008,Sales,Junior,No
+1009,HR,Junior,No
+1010,Engineering,Senior,Yes
+1011,Sales,Senior,No
+1012,HR,Senior,Yes

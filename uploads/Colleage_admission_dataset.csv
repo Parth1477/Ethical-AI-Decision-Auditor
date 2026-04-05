@@ -1,0 +1,17 @@
+Gender,Age,Marks,Decision
+Male,18,75,Accepted
+Male,18,78,Accepted
+Male,19,80,Accepted
+Male,19,82,Accepted
+Male,18,85,Accepted
+Male,19,88,Accepted
+Male,18,90,Accepted
+Male,19,92,Accepted
+Female,18,95,Rejected
+Female,18,96,Rejected
+Female,19,97,Rejected
+Female,19,98,Rejected
+Female,18,99,Rejected
+Female,18,94,Rejected
+Female,19,93,Rejected
+Female,19,92,Rejected

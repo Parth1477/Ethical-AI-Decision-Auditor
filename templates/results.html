@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="results-container mt-4">
+    <div class="card results-card p-5">
+
+        <!-- ── Header ──────────────────────────────────────────────────────── -->
+        <div class="results-header text-center">
+            <h2 class="mb-2">Ethical Audit Report</h2>
+            <p>Dataset: <strong class="highlight-text">{{ dataset_name | default('Uploaded Dataset') }}</strong></p>
+        </div>
+
+        <!-- ── Summary Stats ────────────────────────────────────────────────── -->
+        <div class="results-summary mt-5">
+            <div class="summary-item">
+                <span class="label">Overall Risk</span>
+                <span class="value badge {% if risk_level == 'Low Risk' %}badge-success{% elif risk_level == 'Medium Risk' %}badge-warning{% else %}badge-danger{% endif %}">
+                    {{ risk_level | default('Unknown') }}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Bias Detected</span>
+                <span class="value {% if bias_detected %}metric-bad{% else %}metric-good{% endif %}">
+                    {{ 'Yes' if bias_detected else 'No' }}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Risk Score</span>
+                <span class="value font-weight-bold">{{ risk_score | default('0') }}/100</span>
+            </div>
+        </div>
+
+        <!-- ── Explainability ────────────────────────────────────────────────── -->
+        <div class="content-section mt-5">
+            <h3>🔍 Explainability</h3>
+            <div class="alert alert-info">
+                {{ explanation | default('No explanation available.') }}
+            </div>
+        </div>
+
+        <!-- ── Bias Breakdown ────────────────────────────────────────────────── -->
+        {% if bias_explanations %}
+        <div class="content-section mt-4">
+            <h3>📊 Bias Breakdown by Attribute</h3>
+            {% for exp in bias_explanations %}
+            <div class="bias-detail-block {% if exp.bias_detected %}bias-detail-danger{% else %}bias-detail-ok{% endif %} mt-3">
+                <div class="bias-detail-header">
+                    <strong>{{ exp.attribute }}</strong>
+                    <span class="badge {% if exp.bias_detected %}badge-danger{% else %}badge-success{% endif %}">
+                        {% if exp.bias_detected %}Biased (DI={{ exp.di_ratio }}){% else %}Fair (DI={{ exp.di_ratio }}){% endif %}
+                    </span>
+                </div>
+                <!-- Group rates table -->
+                <table class="group-rates-table mt-2">
+                    <tr>
+                        <th>Group</th>
+                        <th>Selection Rate</th>
+                        <th>Status</th>
+                    </tr>
+                    {% for group, rate in exp.group_rates.items() %}
+                    <tr>
+                        <td>{{ group }}</td>
+                        <td>
+                            <div class="inline-bar">
+                                <div class="inline-bar-fill {% if rate < 0.5 %}rate-bar-low{% elif rate < 0.75 %}rate-bar-mid{% else %}rate-bar-high{% endif %}"
+                                     style="width:{{ (rate*100)|int }}%"></div>
+                                <span>{{ (rate*100)|round(1) }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if exp.di_ratio < 0.8 %}
+                                {% set rates_vals = exp.group_rates.values() | list %}
+                                {% if rate == rates_vals | min %}
+                                <span class="badge badge-danger">Disadvantaged</span>
+                                {% else %}
+                                <span class="badge badge-success">Advantaged</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="badge badge-success">Fair</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <div class="bias-metrics-row mt-2">
+                    <div class="bias-metric">
+                        <span class="bias-metric-label">Disparate Impact</span>
+                        <span class="bias-metric-value {% if exp.di_ratio < 0.8 %}metric-bad{% else %}metric-good{% endif %}">{{ exp.di_ratio }}</span>
+                    </div>
+                    <div class="bias-metric">
+                        <span class="bias-metric-label">Parity Gap</span>
+                        <span class="bias-metric-value">{{ (exp.parity_diff * 100)|round(1) }}%</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ── Business Impact ───────────────────────────────────────────────── -->
+        {% if business_impact %}
+        <div class="content-section mt-4">
+            <h3>💼 Business Impact Analysis
+                {% if context and context != 'general' %}
+                <span class="context-badge">{{ context|capitalize }}</span>
+                {% endif %}
+            </h3>
+            <div class="business-impact-card">
+                <ul class="impact-list">
+                    {% for item in business_impact %}
+                    <li>{{ item | replace('**', '') }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ── Recommendations ───────────────────────────────────────────────── -->
+        <div class="content-section mt-4">
+            <h3>📋 Recommendations</h3>
+            <ul class="styled-list">
+                {% if recommendations %}
+                    {% for rec in recommendations %}
+                    <li>{{ rec | replace('**', '') }}</li>
+                    {% endfor %}
+                {% else %}
+                    <li>No specific recommendations generated.</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- ── Action Buttons ────────────────────────────────────────────────── -->
+        <div class="mt-5 text-center">
+            {% if audit_id is defined %}
+            <a href="{{ url_for('dashboard', audit_id=audit_id) }}" class="btn btn-secondary">📊 View Dashboard</a>
+            {% endif %}
+            <button class="btn btn-outline ml-3" onclick="window.print()">🖨️ Print / Save PDF</button>
+            <a href="/upload" class="btn btn-primary ml-3">🔄 New Audit</a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

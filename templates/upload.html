@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card form-container">
+    <h2>Upload Decision Dataset</h2>
+    <p class="subtitle">Upload a CSV file containing AI decision data to analyse for bias and fairness.</p>
+
+    <!-- Dataset Requirements -->
+    <div class="alert alert-info mb-3">
+        <strong>Dataset Requirements:</strong>
+        <ul style="margin: 0.5rem 0 0 1.2rem; color: inherit;">
+            <li>Must be a <strong>.csv</strong> file</li>
+            <li>Must contain a <strong>Decision</strong> column with binary outcomes</li>
+            <li>Supported labels: <code>Selected/Rejected</code>, <code>Approved/Denied</code>, <code>Accepted/Declined</code>, <code>Yes/No</code></li>
+            <li>Protected attribute columns (Gender, Age, Race, etc.) are auto-detected</li>
+            <li>Minimum <strong>4 rows</strong> of data required</li>
+        </ul>
+    </div>
+
+    <!-- Upload Form (CSV only — manual entry removed) -->
+    <div class="upload-section">
+        <h3>Upload Dataset (CSV)</h3>
+        <form action="/upload_csv" method="POST" enctype="multipart/form-data" class="pt-2">
+            <div class="file-input-wrapper">
+                <input type="file" name="dataset" accept=".csv" required id="file-upload">
+                <label for="file-upload" class="btn btn-outline" id="file-upload-label">
+                    📂 Choose CSV File
+                </label>
+            </div>
+            <div id="file-info" class="file-info-text" style="display:none;"></div>
+            <button type="submit" class="btn btn-primary mt-3" id="analyze-btn" disabled>
+                🔍 Analyse Dataset
+            </button>
+        </form>
+    </div>
+
+
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-upload');
+    const label = document.getElementById('file-upload-label');
+    const fileInfo = document.getElementById('file-info');
+    const analyzeBtn = document.getElementById('analyze-btn');
+
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            label.textContent = '✅ ' + file.name;
+            fileInfo.textContent = `File: ${file.name} (${sizeMB} MB)`;
+            fileInfo.style.display = 'block';
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = '🔍 Analyse Dataset';
+        } else {
+            label.textContent = '📂 Choose CSV File';
+            fileInfo.style.display = 'none';
+            analyzeBtn.disabled = true;
+        }
+    });
+
+    // Show loading state on submit
+    document.querySelector('form').addEventListener('submit', function() {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = '⏳ Analysing...';
+    });
+</script>
+{% endblock %}
